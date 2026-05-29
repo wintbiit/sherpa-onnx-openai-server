@@ -13,13 +13,15 @@ RUN if [ -n "$SHERPA_ONNX_PREBUILT_URL" ]; then \
       && rm -rf /var/lib/apt/lists/* \
       && mkdir -p /opt/sherpa-onnx-prebuilt \
       && curl -fsSL "$SHERPA_ONNX_PREBUILT_URL" -o /tmp/sherpa-onnx-prebuilt.tar.bz2 \
-      && tar -xjf /tmp/sherpa-onnx-prebuilt.tar.bz2 -C /opt/sherpa-onnx-prebuilt --strip-components=1; \
+      && tar -xjf /tmp/sherpa-onnx-prebuilt.tar.bz2 -C /opt/sherpa-onnx-prebuilt --strip-components=1 \
+      && cd /opt/sherpa-onnx-prebuilt/lib \
+      && for lib in lib*.so.*; do ln -sf "$lib" "${lib%%.so.*}.so"; done; \
     fi
 
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 RUN if [ -n "$SHERPA_ONNX_PREBUILT_URL" ]; then \
-      SHERPA_ONNX_LIB_DIR=/opt/sherpa-onnx-prebuilt/lib cargo build --release; \
+      SHERPA_ONNX_LIB_DIR=/opt/sherpa-onnx-prebuilt/lib cargo build --release --no-default-features --features native-shared; \
     else \
       cargo build --release; \
     fi
