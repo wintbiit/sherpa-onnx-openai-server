@@ -1,5 +1,9 @@
 use anyhow::{bail, Context, Result};
-use std::{collections::HashMap, env, path::Path};
+use std::{
+    collections::HashMap,
+    env,
+    path::{Path, PathBuf},
+};
 
 const DEFAULT_MODELS: [&str; 3] = ["tts-1", "tts-1-hd", "gpt-4o-mini-tts"];
 
@@ -51,10 +55,30 @@ impl AppConfig {
         }
 
         let tts = KokoroConfig {
-            model: required_path("KOKORO_MODEL", mock_tts, ensure_file)?,
-            voices: required_path("KOKORO_VOICES", mock_tts, ensure_file)?,
-            tokens: required_path("KOKORO_TOKENS", mock_tts, ensure_file)?,
-            data_dir: required_path("KOKORO_DATA_DIR", mock_tts, ensure_dir)?,
+            model: model_file(
+                "KOKORO_MODEL",
+                "KOKORO_MODEL_FILE",
+                &["model.onnx"],
+                mock_tts,
+            )?,
+            voices: model_file(
+                "KOKORO_VOICES",
+                "KOKORO_VOICES_FILE",
+                &["voices.bin"],
+                mock_tts,
+            )?,
+            tokens: model_file(
+                "KOKORO_TOKENS",
+                "KOKORO_TOKENS_FILE",
+                &["tokens.txt"],
+                mock_tts,
+            )?,
+            data_dir: model_dir(
+                "KOKORO_DATA_DIR",
+                "KOKORO_DATA_DIR_NAME",
+                &["espeak-ng-data", "data/espeak-ng-data"],
+                mock_tts,
+            )?,
             lexicon: optional_existing_file("KOKORO_LEXICON")?,
             dict_dir: optional_existing_dir("KOKORO_DICT_DIR")?,
             lang: optional_env("KOKORO_LANG"),
@@ -117,16 +141,69 @@ fn parse_csv_env(key: &str) -> Option<Vec<String>> {
     })
 }
 
-fn required_path(
-    key: &str,
+fn model_file(
+    explicit_key: &str,
+    file_key: &str,
+    defaults: &[&str],
     skip_exists_check: bool,
-    ensure: fn(&str, &str) -> Result<()>,
 ) -> Result<String> {
-    let value = env::var(key).with_context(|| format!("{key} is required"))?;
+    if let Some(value) = optional_env(explicit_key) {
+        if !skip_exists_check {
+            ensure_file(explicit_key, &value)?;
+        }
+        return Ok(value);
+    }
+
+    let path = model_path(file_key, defaults)?;
+    let value = path.to_string_lossy().into_owned();
     if !skip_exists_check {
-        ensure(key, &value)?;
+        ensure_file(file_key, &value)?;
     }
     Ok(value)
+}
+
+fn model_dir(
+    explicit_key: &str,
+    name_key: &str,
+    defaults: &[&str],
+    skip_exists_check: bool,
+) -> Result<String> {
+    if let Some(value) = optional_env(explicit_key) {
+        if !skip_exists_check {
+            ensure_dir(explicit_key, &value)?;
+        }
+        return Ok(value);
+    }
+
+    let path = model_path(name_key, defaults)?;
+    let value = path.to_string_lossy().into_owned();
+    if !skip_exists_check {
+        ensure_dir(name_key, &value)?;
+    }
+    Ok(value)
+}
+
+fn model_path(name_key: &str, defaults: &[&str]) -> Result<PathBuf> {
+    let root = optional_env("MODEL_DIR").context(
+        "MODEL_DIR is required unless KOKORO_MODEL, KOKORO_VOICES, KOKORO_TOKENS, and KOKORO_DATA_DIR are set",
+    )?;
+    let mut base = PathBuf::from(root);
+    if let Some(model_name) = optional_env("MODEL_NAME") {
+        base.push(model_name);
+    }
+
+    if let Some(name) = optional_env(name_key) {
+        return Ok(base.join(name));
+    }
+
+    for candidate in defaults {
+        let path = base.join(candidate);
+        if path.exists() {
+            return Ok(path);
+        }
+    }
+
+    Ok(base.join(defaults[0]))
 }
 
 fn optional_existing_file(key: &str) -> Result<Option<String>> {

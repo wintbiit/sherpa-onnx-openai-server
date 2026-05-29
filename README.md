@@ -19,7 +19,19 @@ Small Rust HTTP service that exposes a core OpenAI-compatible text-to-speech end
 
 ## Configuration
 
-Required:
+Recommended:
+
+- `MODEL_DIR`, the mounted model root
+- `MODEL_NAME`, optional subdirectory under `MODEL_DIR`
+
+With `MODEL_DIR=/models` and `MODEL_NAME=kokoro`, the service looks for:
+
+- `/models/kokoro/model.onnx`
+- `/models/kokoro/voices.bin`
+- `/models/kokoro/tokens.txt`
+- `/models/kokoro/espeak-ng-data`
+
+Advanced overrides:
 
 - `KOKORO_MODEL`
 - `KOKORO_VOICES`
@@ -28,6 +40,10 @@ Required:
 
 Optional:
 
+- `KOKORO_MODEL_FILE`, default `model.onnx`
+- `KOKORO_VOICES_FILE`, default `voices.bin`
+- `KOKORO_TOKENS_FILE`, default `tokens.txt`
+- `KOKORO_DATA_DIR_NAME`, default `espeak-ng-data`, with `data/espeak-ng-data` also detected
 - `KOKORO_LEXICON`
 - `KOKORO_DICT_DIR`
 - `KOKORO_LANG`
@@ -64,11 +80,19 @@ Run with a mounted Kokoro model directory:
 ```powershell
 docker run --rm --gpus all -p 8080:8080 `
   -v D:\models\kokoro:/models/kokoro:ro `
-  -e KOKORO_MODEL=/models/kokoro/model.onnx `
-  -e KOKORO_VOICES=/models/kokoro/voices.bin `
-  -e KOKORO_TOKENS=/models/kokoro/tokens.txt `
-  -e KOKORO_DATA_DIR=/models/kokoro/espeak-ng-data `
-  sherpa-onnx-openai-server
+  -e MODEL_DIR=/models `
+  -e MODEL_NAME=kokoro `
+  ghcr.io/wintbiit/sherpa-onnx-openai-server:cuda
+```
+
+CPU image:
+
+```powershell
+docker run --rm -p 8080:8080 `
+  -v D:\models\kokoro:/models/kokoro:ro `
+  -e MODEL_DIR=/models `
+  -e MODEL_NAME=kokoro `
+  ghcr.io/wintbiit/sherpa-onnx-openai-server:cpu
 ```
 
 Smoke test:

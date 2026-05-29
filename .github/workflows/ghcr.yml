@@ -25,6 +25,22 @@ jobs:
   build-push-smoke:
     runs-on: ubuntu-22.04
     needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: cuda
+            runtime_image: nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
+            provider: cuda
+            tags: |
+              ghcr.io/${{ github.repository }}:cuda
+              ghcr.io/${{ github.repository }}:cuda-${{ github.sha }}
+          - variant: cpu
+            runtime_image: debian:bookworm-slim
+            provider: cpu
+            tags: |
+              ghcr.io/${{ github.repository }}:cpu
+              ghcr.io/${{ github.repository }}:cpu-${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -33,32 +49,31 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=,format=long
-            type=raw,value=latest,enable={{is_default_branch}}
-      - uses: docker/build-push-action@v6
+      - name: Build and push ${{ matrix.variant }}
+        uses: docker/build-push-action@v6
         with:
           context: .
+          build-args: |
+            RUNTIME_IMAGE=${{ matrix.runtime_image }}
+            DEFAULT_PROVIDER=${{ matrix.provider }}
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ matrix.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ matrix.variant }}
+            org.opencontainers.image.base.name=${{ matrix.runtime_image }}
+            org.opencontainers.image.sherpa-onnx.provider=${{ matrix.provider }}
+          cache-from: type=gha,scope=${{ matrix.variant }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.variant }}
       - name: Smoke test published image
         env:
-          IMAGE_REF: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          IMAGE_REF: ${{ env.IMAGE_NAME }}:${{ matrix.variant }}-${{ github.sha }}
         run: |
           docker pull "$IMAGE_REF"
           docker run -d --name tts-smoke -p 8080:8080 \
             -e MOCK_TTS=true \
-            -e KOKORO_MODEL=/tmp/model.onnx \
-            -e KOKORO_VOICES=/tmp/voices.bin \
-            -e KOKORO_TOKENS=/tmp/tokens.txt \
-            -e KOKORO_DATA_DIR=/tmp/data \
+            -e MODEL_DIR=/tmp/model \
             "$IMAGE_REF"
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:8080/healthz; then
