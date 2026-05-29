@@ -13,7 +13,7 @@ RUN cargo build --release
 FROM ${RUNTIME_IMAGE}
 ARG DEFAULT_PROVIDER=cuda
 RUN apt-get -o Acquire::Retries=5 update \
-    && apt-get -o Acquire::Retries=5 install -y --no-install-recommends ca-certificates ffmpeg libgomp1 \
+    && apt-get -o Acquire::Retries=5 install -y --no-install-recommends ca-certificates curl ffmpeg libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

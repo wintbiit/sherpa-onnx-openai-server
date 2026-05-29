@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+    paths:
+      - ".github/workflows/ghcr.yml"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "Dockerfile"
+      - "src/**"
   workflow_dispatch:
 
 permissions:

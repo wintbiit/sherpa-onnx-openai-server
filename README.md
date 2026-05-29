@@ -168,6 +168,12 @@ services:
       MODEL_NAME: kokoro-multi-lang-v1_1
       MAX_CONCURRENT_SYNTHESIS: "1"
     gpus: all
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 ```
 
 CPU service:
@@ -184,6 +190,12 @@ services:
       MODEL_DIR: /models
       MODEL_NAME: kokoro-int8-multi-lang-v1_1
       MAX_CONCURRENT_SYNTHESIS: "1"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 ```
 
 Run:
