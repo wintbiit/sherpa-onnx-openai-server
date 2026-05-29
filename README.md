@@ -26,12 +26,39 @@ For this service, use `kokoro-multi-lang-v1_1` from the official k2-fsa `sherpa-
 
 Use the normal precision package for the `:cuda` image unless image/disk size is the priority. Use the int8 package for the `:cpu` image or smaller deployments.
 
-Download:
+Download the CUDA/default model:
 
 ```powershell
 mkdir D:\models
 curl.exe -L https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-multi-lang-v1_1.tar.bz2 -o D:\models\kokoro-multi-lang-v1_1.tar.bz2
 tar -xf D:\models\kokoro-multi-lang-v1_1.tar.bz2 -C D:\models
+```
+
+Download the smaller int8 model for CPU deployments:
+
+```powershell
+mkdir D:\models
+curl.exe -L https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-int8-multi-lang-v1_1.tar.bz2 -o D:\models\kokoro-int8-multi-lang-v1_1.tar.bz2
+tar -xf D:\models\kokoro-int8-multi-lang-v1_1.tar.bz2 -C D:\models
+```
+
+Expected layout after extraction:
+
+```text
+D:\models
+  kokoro-multi-lang-v1_1
+    model.onnx
+    voices.bin
+    tokens.txt
+    espeak-ng-data
+    lexicon-us-en.txt
+    lexicon-zh.txt
+    dict
+  kokoro-int8-multi-lang-v1_1
+    model.onnx
+    voices.bin
+    tokens.txt
+    espeak-ng-data
 ```
 
 The older `kokoro-multi-lang-v1_0` is also supported and documented by k2-fsa. It has fewer speakers, but the same simple layout: `model.onnx`, `voices.bin`, `tokens.txt`, and `espeak-ng-data`.
@@ -122,6 +149,47 @@ docker run --rm -p 8080:8080 `
   -e MODEL_DIR=/models `
   -e MODEL_NAME=kokoro-int8-multi-lang-v1_1 `
   ghcr.io/wintbiit/sherpa-onnx-openai-server:cpu
+```
+
+## Docker Compose
+
+CUDA service:
+
+```yaml
+services:
+  tts:
+    image: ghcr.io/wintbiit/sherpa-onnx-openai-server:cuda
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./models:/models:ro
+    environment:
+      MODEL_DIR: /models
+      MODEL_NAME: kokoro-multi-lang-v1_1
+      MAX_CONCURRENT_SYNTHESIS: "1"
+    gpus: all
+```
+
+CPU service:
+
+```yaml
+services:
+  tts:
+    image: ghcr.io/wintbiit/sherpa-onnx-openai-server:cpu
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./models:/models:ro
+    environment:
+      MODEL_DIR: /models
+      MODEL_NAME: kokoro-int8-multi-lang-v1_1
+      MAX_CONCURRENT_SYNTHESIS: "1"
+```
+
+Run:
+
+```powershell
+docker compose up -d
 ```
 
 Smoke test:
