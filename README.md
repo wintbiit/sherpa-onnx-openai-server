@@ -125,6 +125,13 @@ Default voice ids:
 
 ## Docker
 
+Images:
+
+- `:cpu` links the normal sherpa-onnx shared CPU prebuilt libraries.
+- `:cuda` links the official sherpa-onnx CUDA 12.x + cuDNN 9.x GPU prebuilt libraries and runs on `nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04`.
+
+If the CUDA image logs `Available providers: CPUExecutionProvider`, it is not using a GPU-enabled sherpa-onnx native library. Rebuild or pull a newer `:cuda` image. A CUDA base image alone is not sufficient; the Rust binary must be linked against the GPU sherpa-onnx libraries.
+
 Build:
 
 ```powershell

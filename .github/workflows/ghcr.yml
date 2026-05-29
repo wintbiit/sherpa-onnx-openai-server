@@ -38,12 +38,14 @@ jobs:
           - variant: cuda
             runtime_image: nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
             provider: cuda
+            prebuilt_url: https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.2/sherpa-onnx-v1.13.2-cuda-12.x-cudnn-9.x-linux-x64-gpu.tar.bz2
             tags: |
               ghcr.io/${{ github.repository }}:cuda
               ghcr.io/${{ github.repository }}:cuda-${{ github.sha }}
           - variant: cpu
             runtime_image: debian:bookworm-slim
             provider: cpu
+            prebuilt_url: ""
             tags: |
               ghcr.io/${{ github.repository }}:cpu
               ghcr.io/${{ github.repository }}:cpu-${{ github.sha }}
@@ -62,6 +64,7 @@ jobs:
           build-args: |
             RUNTIME_IMAGE=${{ matrix.runtime_image }}
             DEFAULT_PROVIDER=${{ matrix.provider }}
+            SHERPA_ONNX_PREBUILT_URL=${{ matrix.prebuilt_url }}
           push: true
           tags: ${{ matrix.tags }}
           labels: |
