@@ -1,5 +1,8 @@
 # syntax=docker/dockerfile:1
 
+ARG RUNTIME_IMAGE=nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
+ARG DEFAULT_PROVIDER=cuda
+
 FROM rust:1.86-bookworm AS builder
 WORKDIR /app
 
@@ -7,8 +10,6 @@ COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 RUN cargo build --release
 
-ARG RUNTIME_IMAGE=nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
-ARG DEFAULT_PROVIDER=cuda
 FROM ${RUNTIME_IMAGE}
 ARG DEFAULT_PROVIDER=cuda
 RUN apt-get -o Acquire::Retries=5 update \
