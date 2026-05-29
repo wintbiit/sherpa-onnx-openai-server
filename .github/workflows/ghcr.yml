@@ -45,7 +45,7 @@ jobs:
           - variant: cpu
             runtime_image: debian:bookworm-slim
             provider: cpu
-            prebuilt_url: ""
+            prebuilt_url: https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.2/sherpa-onnx-v1.13.2-linux-x64-shared-lib.tar.bz2
             tags: |
               ghcr.io/${{ github.repository }}:cpu
               ghcr.io/${{ github.repository }}:cpu-${{ github.sha }}
