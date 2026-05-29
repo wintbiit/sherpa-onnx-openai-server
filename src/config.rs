@@ -79,8 +79,12 @@ impl AppConfig {
                 &["espeak-ng-data", "data/espeak-ng-data"],
                 mock_tts,
             )?,
-            lexicon: optional_existing_file("KOKORO_LEXICON")?,
-            dict_dir: optional_existing_dir("KOKORO_DICT_DIR")?,
+            lexicon: inferred_optional_files(
+                "KOKORO_LEXICON",
+                &["lexicon-us-en.txt", "lexicon-zh.txt"],
+                mock_tts,
+            )?,
+            dict_dir: inferred_optional_dir("KOKORO_DICT_DIR", "dict", mock_tts)?,
             lang: optional_env("KOKORO_LANG"),
             provider: env_or("SHERPA_ONNX_PROVIDER", "cuda"),
             num_threads: env_or("SHERPA_ONNX_NUM_THREADS", "1")
@@ -184,13 +188,9 @@ fn model_dir(
 }
 
 fn model_path(name_key: &str, defaults: &[&str]) -> Result<PathBuf> {
-    let root = optional_env("MODEL_DIR").context(
+    let base = model_base_dir().context(
         "MODEL_DIR is required unless KOKORO_MODEL, KOKORO_VOICES, KOKORO_TOKENS, and KOKORO_DATA_DIR are set",
     )?;
-    let mut base = PathBuf::from(root);
-    if let Some(model_name) = optional_env("MODEL_NAME") {
-        base.push(model_name);
-    }
 
     if let Some(name) = optional_env(name_key) {
         return Ok(base.join(name));
@@ -206,22 +206,62 @@ fn model_path(name_key: &str, defaults: &[&str]) -> Result<PathBuf> {
     Ok(base.join(defaults[0]))
 }
 
-fn optional_existing_file(key: &str) -> Result<Option<String>> {
-    optional_env(key)
-        .map(|value| {
-            ensure_file(key, &value)?;
-            Ok(value)
-        })
-        .transpose()
+fn model_base_dir() -> Option<PathBuf> {
+    let mut base = PathBuf::from(optional_env("MODEL_DIR")?);
+    if let Some(model_name) = optional_env("MODEL_NAME") {
+        base.push(model_name);
+    }
+    Some(base)
 }
 
-fn optional_existing_dir(key: &str) -> Result<Option<String>> {
-    optional_env(key)
-        .map(|value| {
-            ensure_dir(key, &value)?;
-            Ok(value)
-        })
-        .transpose()
+fn inferred_optional_files(
+    explicit_key: &str,
+    defaults: &[&str],
+    skip_exists_check: bool,
+) -> Result<Option<String>> {
+    if let Some(value) = optional_env(explicit_key) {
+        if !skip_exists_check {
+            for path in value
+                .split(',')
+                .map(str::trim)
+                .filter(|path| !path.is_empty())
+            {
+                ensure_file(explicit_key, path)?;
+            }
+        }
+        return Ok(Some(value));
+    }
+
+    let Some(base) = model_base_dir() else {
+        return Ok(None);
+    };
+    let paths: Vec<String> = defaults
+        .iter()
+        .map(|name| base.join(name))
+        .filter(|path| path.is_file())
+        .map(|path| path.to_string_lossy().into_owned())
+        .collect();
+
+    Ok((!paths.is_empty()).then(|| paths.join(",")))
+}
+
+fn inferred_optional_dir(
+    explicit_key: &str,
+    default_name: &str,
+    skip_exists_check: bool,
+) -> Result<Option<String>> {
+    if let Some(value) = optional_env(explicit_key) {
+        if !skip_exists_check {
+            ensure_dir(explicit_key, &value)?;
+        }
+        return Ok(Some(value));
+    }
+
+    let Some(base) = model_base_dir() else {
+        return Ok(None);
+    };
+    let path = base.join(default_name);
+    Ok(path.is_dir().then(|| path.to_string_lossy().into_owned()))
 }
 
 fn ensure_file(key: &str, value: &str) -> Result<()> {
