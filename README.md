@@ -50,15 +50,15 @@ Recommended:
 - `MODEL_DIR`, the mounted model root
 - `MODEL_NAME`, optional subdirectory under `MODEL_DIR`
 
-With `MODEL_DIR=/models` and `MODEL_NAME=kokoro`, the service looks for:
+With `MODEL_DIR=/models` and `MODEL_NAME=kokoro-multi-lang-v1_1`, the service looks for:
 
-- `/models/kokoro/model.onnx`
-- `/models/kokoro/voices.bin`
-- `/models/kokoro/tokens.txt`
-- `/models/kokoro/espeak-ng-data`
-- `/models/kokoro/lexicon-us-en.txt`, if present
-- `/models/kokoro/lexicon-zh.txt`, if present
-- `/models/kokoro/dict`, if present
+- `/models/kokoro-multi-lang-v1_1/model.onnx`
+- `/models/kokoro-multi-lang-v1_1/voices.bin`
+- `/models/kokoro-multi-lang-v1_1/tokens.txt`
+- `/models/kokoro-multi-lang-v1_1/espeak-ng-data`
+- `/models/kokoro-multi-lang-v1_1/lexicon-us-en.txt`, if present
+- `/models/kokoro-multi-lang-v1_1/lexicon-zh.txt`, if present
+- `/models/kokoro-multi-lang-v1_1/dict`, if present
 
 Advanced overrides:
 
@@ -108,9 +108,9 @@ Run with a mounted Kokoro model directory:
 
 ```powershell
 docker run --rm --gpus all -p 8080:8080 `
-  -v D:\models\kokoro-multi-lang-v1_1:/models/kokoro:ro `
+  -v D:\models:/models:ro `
   -e MODEL_DIR=/models `
-  -e MODEL_NAME=kokoro `
+  -e MODEL_NAME=kokoro-multi-lang-v1_1 `
   ghcr.io/wintbiit/sherpa-onnx-openai-server:cuda
 ```
 
@@ -118,9 +118,9 @@ CPU image:
 
 ```powershell
 docker run --rm -p 8080:8080 `
-  -v D:\models\kokoro-int8-multi-lang-v1_1:/models/kokoro:ro `
+  -v D:\models:/models:ro `
   -e MODEL_DIR=/models `
-  -e MODEL_NAME=kokoro `
+  -e MODEL_NAME=kokoro-int8-multi-lang-v1_1 `
   ghcr.io/wintbiit/sherpa-onnx-openai-server:cpu
 ```
 
